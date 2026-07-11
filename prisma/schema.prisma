@@ -1,0 +1,96 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum CategoryType {
+  LOGIN
+  SECURE_NOTE
+  CARD
+  IDENTITY
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  authHash  String   // Server-side double-hashed authentication secret
+  authSalt  String   // Hex salt for client-side PBKDF2 stretching
+  vaultSalt String   // Hex salt for client-side encryption key derivation
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  vaultItems   VaultItem[]
+  auditLogs    AuditLog[]
+  sessions     Session[]
+  userSettings UserSettings?
+
+  @@index([email])
+}
+
+model VaultItem {
+  id               String       @id @default(uuid())
+  userId           String
+  category         CategoryType
+  encryptedTitle   String       // AES-256-GCM encrypted client-side title
+  encryptedPayload String       // AES-256-GCM encrypted payload containing secret details
+  isFavorite       Boolean      @default(false)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  // Relationships
+  user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, category])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String
+  action    String   // e.g. "USER_REGISTERED", "VAULT_ITEM_CREATED"
+  details   String   // Context message
+  ipAddress String?
+  timestamp DateTime @default(now())
+
+  // Relationships
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, timestamp])
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  userId       String
+  token        String   @unique
+  userAgent    String?
+  ipAddress    String?
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  // Relationships
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model UserSettings {
+  id                  String   @id @default(uuid())
+  userId              String   @unique
+  autoLockTimer       Int      @default(15) // In minutes
+  clipboardAutoClear  Int      @default(30) // In seconds
+  isBiometricEnabled  Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  // Relationships
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

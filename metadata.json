@@ -1,0 +1,6 @@
+{
+  "name": "VaultX",
+  "description": "Your Digital Vault. Protected by You. Zero-knowledge password and secret manager.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
